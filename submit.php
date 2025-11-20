@@ -412,6 +412,8 @@ try {
     $mailSent = true;
 } catch (Exception $e) {
     error_log("Mail sending failed: " . $mail->ErrorInfo);
+    // ⚠️ 測試用：直接在頁面上顯示（測完記得關掉）
+    echo '<pre>Mail error: ' . htmlspecialchars($mail->ErrorInfo, ENT_QUOTES, 'UTF-8') . "</pre>";
 }
 
 $conn->close();
