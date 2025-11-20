@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<head>
+  
+  <!-- PWA Meta Tags -->
+<meta name="theme-color" content="#2d1b4e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="四系迎新">
+<meta name="mobile-web-app-capable" content="yes">
+
+<!-- PWA Manifest -->
+<link rel="manifest" href="manifest.json">
+
+<!-- Apple Touch Icons -->
+<link rel="apple-touch-icon" sizes="180x180" href="images/icon-192x192.png">
+<link rel="apple-touch-icon" sizes="152x152" href="images/icon-152x152.png">
+<link rel="apple-touch-icon" sizes="144x144" href="images/icon-144x144.png">
+<link rel="apple-touch-icon" sizes="120x120" href="images/icon-128x128.png">
+
+<!-- Favicon -->
+<link rel="icon" type="image/png" sizes="32x32" href="images/icon-72x72.png">
+<link rel="shortcut icon" href="images/icon-72x72.png">
+  
+	<!--
+    	Robotic Template
+    	http://www.templatemo.com/preview/templatemo_430_robotic
+    -->
+    <title>Robotic - Free Responsive Template</title>
+    <meta name="keywords" content="" />
+    <meta name="description" content="" />
+	<meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400italic,600italic,700italic,400,600,700,800' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/templatemo_misc.css">
+    <link rel="stylesheet" href="css/templatemo_style.css">
+    <!-- JavaScripts -->   
+    <script src="js/jquery-1.11.1.min.js"></script> <!-- lightbox -->
+    <script src="js/templatemo_custom.js"></script> <!-- lightbox -->
+    <script src="js/jquery.lightbox.js"></script>
+    <script src="js/bootstrap-collapse.js"></script> 
+    <!-- JavaScripts -->  
+     
+</head>
+<body>
+        <!-- 光年資外｜進場動畫 -->
+<div id="warp-intro" role="status" aria-live="polite" aria-label="頁面載入中，光年跳躍啟動">
+  <div class="wi-stars"></div>
+  <div class="wi-core">
+    <div class="wi-title">
+      <span class="l1">緣分讓我們相遇</span>
+      <span class="l2"><span class="tiny">在</span><span class="big">光年資外</span></span>
+    </div>
+    <!-- 銀河劃開與散逸層 -->
+<div class="wi-burst" aria-hidden="true">
+  <canvas class="wi-dust"></canvas>
+  <div class="wi-galaxy"></div>
+  <div class="wi-slit wi-slit-left"></div>
+  <div class="wi-slit wi-slit-right"></div>
+</div>
+
+
+    <div class="wi-bar">
+      <div class="wi-fill"><span class="wi-spark"></span></div>
+    </div>
+    <div class="wi-perc" aria-hidden="true">0%</div>
+    <div class="wi-hint">Initializing warp drive…</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const intro   = document.getElementById('warp-intro');
+  if (!intro) return;
+
+  // ====== 進度條邏輯 ======
+  const percEl  = intro.querySelector('.wi-perc');
+  const fillEl  = intro.querySelector('.wi-fill');
+  const reduce  = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const prevOverflow = document.documentElement.style.overflow;
+  document.documentElement.style.overflow = 'hidden'; // 進場鎖捲動
+
+  let prog = 0, target = 86, timer;
+  function setProgress(p){
+    prog = Math.max(0, Math.min(100, Math.floor(p)));
+    fillEl.style.width = prog + '%';
+    percEl.textContent = prog + '%';
+  }
+  function autoTick(){
+    const step = Math.max(0.1, (target - prog) * 0.06);
+    setProgress(prog + step);
+    if (prog < target) timer = setTimeout(autoTick, reduce ? 80 : 50);
+  }
+  setProgress(0); autoTick();
+
+  // ====== 銀河劃開與星塵命名空間（供內外共用） ======
+  const burst      = intro.querySelector('.wi-burst');
+  const dustCanvas = intro.querySelector('.wi-dust');
+  const ctx        = dustCanvas.getContext('2d');
+  const DPR        = Math.min(2, window.devicePixelRatio || 1);
+
+  let W=0, H=0, particles=[], running=false, rafId=null;
+
+  function resizeDust(){
+    const r = intro.getBoundingClientRect();
+    W = dustCanvas.width  = Math.floor(r.width  * DPR);
+    H = dustCanvas.height = Math.floor(r.height * DPR);
+    dustCanvas.style.width  = r.width + 'px';
+    dustCanvas.style.height = r.height + 'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  function spawnDust(n=220){
+    particles = [];
+    const cx = W/(2*DPR), cy = H/(2*DPR);
+    for(let i=0;i<n;i++){
+      const ang = Math.random()*Math.PI*2;
+      const spd = 0.8 + Math.random()*2.8;    // 略調快一點更有爆散感
+      const life= 700 + Math.random()*900;    // 粒子壽命
+      particles.push({
+        x: cx + (Math.random()*20-10),
+        y: cy + (Math.random()*12-6),
+        vx: Math.cos(ang)*spd,
+        vy: Math.sin(ang)*spd*0.55,          // 橫向為主（像銀河盤）
+        t:0, life,
+        r: 0.8 + Math.random()*2.4,
+        c: Math.random()<.5 ? 'rgba(255,255,255,' : 'rgba(120,255,230,'
+      });
+    }
+  }
+  let last=0;
+  function loop(t){
+    if(!running) return;
+    if(!last) last=t;
+    const dt = Math.min(32, t-last); last=t;
+
+    ctx.clearRect(0,0,W,H);
+    ctx.globalCompositeOperation = 'lighter';
+
+    for (const p of particles){
+      p.t += dt;
+      const k = p.t / p.life;             // 0..1
+      p.x += p.vx * (dt/16);
+      p.y += p.vy * (dt/16);
+
+      const r = p.r * (1 + k*1.2);
+      ctx.beginPath();
+      ctx.fillStyle = `${p.c}${(0.12 + 0.34*(1-k)).toFixed(3)})`;
+      ctx.arc(p.x, p.y, r, 0, Math.PI*2);
+      ctx.fill();
+    }
+    particles = particles.filter(p => p.t < p.life);
+
+    if (particles.length === 0) {
+      finishIntro();  // 星塵散盡 → 正式關閉覆蓋層
+      return;
+    }
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function startGalaxyBurst(){
+    resizeDust();
+    spawnDust();
+    burst.classList.add('wi-open'); // 觸發 CSS 的銀河/劃開動畫
+    running = true;
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function finishIntro(){
+    running = false;
+    if (rafId) cancelAnimationFrame(rafId);
+
+    // 告知外部：進場已完整結束（可用來啟動打字等）
+    window.dispatchEvent(new CustomEvent('warp:introFinished'));
+
+    // 收場淡出動畫（對應 CSS 的 wiExit 900ms）
+    intro.classList.add('wi-done');
+    setTimeout(() => {
+      intro.remove();
+      document.documentElement.style.overflow = prevOverflow || '';
+    }, 900);
+  }
+
+  // 將控制函式掛到全域，避免作用域問題
+  window.WarpIntro = { startGalaxyBurst, finishIntro };
+
+  // 真正載入完成 → 補滿到 100% → 啟動銀河段
+  window.addEventListener('load', () => {
+    target = 100;
+    const fin = () => {
+      setProgress(prog + 8);
+      if (prog < 100) requestAnimationFrame(fin);
+      else {
+        // 不要直接 remove，交給銀河段與星塵散盡後的 finishIntro
+        setTimeout(window.WarpIntro.startGalaxyBurst, 120);
+      }
+    };
+    fin();
+  });
+
+  // 安全機制：10秒仍未 load → 也要進入銀河段，確保視覺完整
+  setTimeout(() => {
+    if (prog < 96) {
+      target = 100;
+      window.WarpIntro.startGalaxyBurst();
+    }
+  }, 10000);
+
+  // 進場層尺寸異動時重算畫布
+  new ResizeObserver(resizeDust).observe(intro);
+})();
+</script>
+
+
+
+
+    
+    <div class="bg-anim"></div>
+    <canvas id="geoParticles" class="fx-particles"></canvas>
+  <!-- 你的原本內容 -->
+    <!-- 原本的頁面內容從這裡開始 -->
+
+    <div id="templatemo_home" class="templatemo_headerimg"><img src="images/raxter1040_two_young_people_standing_on_a_futuristic_platform_96e69b8d-da2b-4622-834d-8fa963db4bbc_3.png" alt="templatemo header"></div>
+    <div class="templatemo_headerimg_cover"><img src="images/templatemo_header.png" alt="templatemo header"></div>
+    <div class="templatemo_headerwrapper">
+        <div class="templatemo_menu">
+            <nav class="navbar navbar-default" role="navigation">
+                <div class="container-fluid">
+                    <!-- Brand and toggle get grouped for better mobile display -->
+                    <div class="navbar-header">
+                        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1"><span class="sr-only">Toggle navigation</span> <span class="icon-bar"></span> <span class="icon-bar"></span> <span class="icon-bar"></span></button>
+                    </div>
+                    <!-- Collect the nav links, forms, and other content for toggling -->
+                    <div id="top-menu">
+                        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                            <ul class="nav navbar-nav">
+                                <li><a class="menu first" href="#templatemo_home"><span>HOME</span></a></li>
+                                <li><a class="menu" href="#templatemo_service"><span>ACTIVITY</span></a></li>
+                                <li><a class="menu" href="#templatemo_packages"><span>NOTICE</span></a></li>
+                                <li><a class="menu" href="#templatemo_about"><span>APPLICATION FORM</span></a></li>
+                                <li><a class="menu" href="#templatemo_contact"><span>ABOUT</span></a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- /.navbar-collapse --> 
+                </div>
+                <!-- /.container-fluid --> 
+            </nav>
+            <div class="templatemo_socialmedia">
+                <div class="templatemo_social"><a href="#"><img src="images/facebook.png" alt="templatemo facebook"></a></div>
+                <div class="templatemo_social"><a href="#"><img src="images/twitter.png" alt="templatemo twitter"></a></div>
+            </div>
+        </div>
+        <div class="clear"></div>
+        <div class="container templatemo_wrapper">
+            <!-- home start -->
+            <div class="row">
+                <div class="col-sm-6">
+                    <div class="templatemo_title"><span>四資</span>迎新</div>
+                    <div class="clear"></div>
+                    <div class="templatemo_subtitle">資訊學院一年一度最大的活動</div>
+                </div>
+                <!-- 特效標題：靠右顯示 -->
+                <div class="col-sm-6 templatemo_home">
+                 <section class="fx-title-section">
+        
+                 <div class="fx-title-wrap">
+                    <h1 class="fx-title">
+                    <span class="line line-1">
+                     <span class="type" data-text="緣分讓我們相遇"></span>
+                    </span>
+                     <span class="line line-2">
+                    <span class="tiny type" data-text="在"></span>
+                    <span class="type" data-text="光年資外"></span>
+                    </span>
+                    </h1>
+                    
+                    <canvas id="title-orbits" class="orbits-canvas" aria-hidden="true"></canvas>
+                </div> 
+                </section>
+<script>
+(() => {
+  // 取得三段：第1行、第2行的小「在」、第2行的大「光年資外」
+  const blocks = document.querySelectorAll('.fx-title .type');
+  if (!blocks.length) return;
+  const [line1, tiny, line2] = blocks;
+  const t1   = line1?.getAttribute('data-text') || '緣分讓我們相遇';
+  const tTin = tiny?.getAttribute('data-text')  || '在';
+  const t2   = line2?.getAttribute('data-text') || '光年資外';
+
+  // 單段打字：逐字，等上個字完成才打下一個
+  function typeOne(el, text, { delay=260, doneDelay=350 } = {}) {
+    return new Promise(resolve => {
+      el.textContent = '';
+      el.classList.remove('done');
+      el.classList.add('typing');
+
+      let i = 0;
+      const tick = () => {
+        el.textContent += text[i];
+        i++;
+        if (i < text.length) {
+          setTimeout(tick, delay);          // 每次打一個完整字
+        } else {
+          el.classList.remove('typing');
+          el.classList.add('done');
+          setTimeout(resolve, doneDelay);   // 段落完畢的停頓
+        }
+      };
+      setTimeout(tick, delay);
+    });
+  }
+
+  // 一次完整序列：line1 -> tiny -> line2
+  async function playOnce() {
+    // 先清空
+    line1.textContent = ''; line1.classList.remove('done','typing');
+    tiny.textContent  = ''; tiny.classList.remove('done','typing');
+    line2.textContent = ''; line2.classList.remove('done','typing');
+
+    await typeOne(line1, t1,   { delay: 280, doneDelay: 420 });
+    await typeOne(tiny, tTin,  { delay: 300, doneDelay: 260 });
+    await typeOne(line2, t2,   { delay: 280, doneDelay: 0   });
+  }
+
+  // 循環播放：完成後等 2 秒再重播
+  let looping = false;
+  async function loopTyping(){
+    if (looping) return;
+    looping = true;
+    while (true) {
+      await playOnce();
+      await new Promise(r => setTimeout(r, 2000)); // 等 2 秒
+    }
+  }
+
+  // 進場動畫結束後才開始循環；若沒有進場覆蓋層則直接開始
+  if (document.getElementById('warp-intro')) {
+    window.addEventListener('warp:introFinished', () => loopTyping(), { once: true });
+  } else {
+    loopTyping();
+  }
+})();
+</script>
+
+
+<script>
+(() => {
+  const wrap = document.querySelector('.fx-title-wrap');
+  const canvas = document.getElementById('title-orbits');
+  if (!wrap || !canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  const DPR = Math.min(2, window.devicePixelRatio || 1);
+  let W=0,H=0,cx=0,cy=0, planets=[], running=true;
+
+  // 色系：白心＋青綠外暈
+  const COLORS = [
+    { core:'rgba(255,255,255,0.95)', glow:'rgba( 20,255,210,0.55)' },
+    { core:'rgba(235,255,250,0.95)', glow:'rgba( 10,230,190,0.50)' },
+    { core:'rgba(255,255,255,0.95)', glow:'rgba(  0,200,160,0.45)' },
+  ];
+
+  function resize() {
+    // 以 .fx-title-wrap 為基準，canvas 跟它一樣大（含 inset 外擴）
+    const rect = wrap.getBoundingClientRect();
+    const style = getComputedStyle(canvas);
+    const pad = parseFloat(style.insetTop || 60) || 60; // 只是保險值
+    W = Math.max(200, rect.width + 120);
+    H = Math.max(160, rect.height + 120);
+    canvas.width  = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    const OFFSET_PX = 60;      // 右移 100px，喜歡再調
+    cx = W / 2 + OFFSET_PX;
+    cy = H/2;
+
+    // 依大小調整行星數
+    const target = Math.max(3, Math.min(8, Math.round((W*H)/120000)));
+    if (planets.length === 0) makePlanets(target);
+    else if (planets.length < target) addPlanets(target - planets.length);
+    else planets.length = target;
+  }
+
+  function addPlanets(n){ for(let i=0;i<n;i++) planets.push(makeOne()); }
+  function makePlanets(n){ planets = []; addPlanets(n); }
+
+  function rand(a,b){ return a + Math.random()*(b-a); }
+  function pick(arr){ return arr[(Math.random()*arr.length)|0]; }
+
+  function makeOne(){
+    const c = pick(COLORS);
+    const rx = rand(W*0.06, W*0.42);      // 橢圓半徑
+    const ry = rand(H*0.16, H*0.52);
+    const ang = rand(0, Math.PI*2);
+    const speed = rand(0.01, 0.02) * (Math.random()<0.5?-1:1); // 正反繞
+    const size = rand(2.8, 4.6);
+    const trailLen = 100;                   // 尾流長度
+    return { c, rx, ry, a:ang, v:speed, s:size, trail:[] };
+  }
+
+  function update(p){
+    p.a += p.v;
+    const x = cx + Math.cos(p.a) * p.rx;
+    const y = cy + Math.sin(p.a) * p.ry;
+
+    // 記錄尾流
+    p.trail.push({x,y});
+    if (p.trail.length > 24) p.trail.shift(); // 限制最大保險
+    while (p.trail.length > 16) p.trail.shift();
+  }
+
+  function drawPlanet(p){
+    // 尾流（由舊到新漸亮）
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i=1;i<p.trail.length;i++){
+      const prev = p.trail[i-1], cur = p.trail[i];
+      const t = i / p.trail.length;                 // 0..1
+      const w = Math.max(0.6, p.s * t);             // 逐段變粗
+      ctx.strokeStyle = `rgba(20,255,210,${0.06 + 0.22*t})`;
+      ctx.lineWidth = w;
+      ctx.beginPath();
+      ctx.moveTo(prev.x, prev.y);
+      ctx.lineTo(cur.x,  cur.y);
+      ctx.stroke();
+    }
+
+    // 末端光暈
+    const tip = p.trail[p.trail.length-1];
+    if (!tip) return;
+
+    // 外圍柔光
+    ctx.shadowColor = p.c.glow;
+    ctx.shadowBlur  = 18;
+
+    ctx.beginPath();
+    ctx.fillStyle = p.c.glow;
+    ctx.arc(tip.x, tip.y, p.s*2.2, 0, Math.PI*2);
+    ctx.fill();
+
+    // 核心
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.fillStyle = p.c.core;
+    ctx.arc(tip.x, tip.y, p.s, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  function tick(){
+    if (!running) return;
+    // 透明清屏，不抹掉舊內容的方式是「自己管理 trail」，所以直接清空畫面即可
+    ctx.clearRect(0,0,W,H);
+
+    planets.forEach(p => { update(p); drawPlanet(p); });
+
+    requestAnimationFrame(tick);
+  }
+
+  // 初始化
+  const ro = new ResizeObserver(resize);
+  ro.observe(wrap);
+  resize();
+  tick();
+
+  // 節能處理
+  document.addEventListener('visibilitychange', () => {
+    running = document.visibilityState === 'visible';
+    if (running) requestAnimationFrame(tick);
+  });
+})();
+</script>
+
+
+
+                    <div class="clear"></div>
+                    <div class="templatemo_homebuton"><a href="#templatemo_about">即刻報名</a></div>
+                
+            
+            <!-- 倒數計時元件 -->
+<div id="countdown" class="cd-widget" data-deadline="2026-09-01T08:00:00+08:00" aria-live="polite">
+    <div class="cd-seg">
+    <span class="num" data-unit="days" color="#30e4d8">00</span><span class="lbl">天</span>
+  </div>
+  <div class="cd-sep">:</div>
+  <div class="cd-seg">
+    <span class="num" data-unit="hours">00</span><span class="lbl">時</span>
+  </div>
+  <div class="cd-sep">:</div>
+  <div class="cd-seg">
+    <span class="num" data-unit="minutes">00</span><span class="lbl">分</span>
+  </div>
+  <div class="cd-sep">:</div>
+  <div class="cd-seg">
+    <span class="num" data-unit="seconds">00</span><span class="lbl">秒</span>
+  </div>
+</div>
+
+            <div class="row">
+                <div class="col-md-6"></div>
+                <div class="col-md-6">
+                    <div class="templatemo_separater">
+                        <span class="page">1</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+            <!-- home end -->   
+        </div>
+        <!-- service start --> 
+        <div id="templatemo_service" class="container">
+            <div class="row">
+                <div class="col-md-6 templatemo_service">
+                    <div class="gallery-item">
+                        <img src="images/service/1.jpg" alt="gallery 1">
+                        <div class="templatemo_service_frame"><img src="images/templatemo_serviceimg.png" alt="templatemo_frame"></div>
+                        <div class="overlay">
+                            <div class="templatemo_service_frame"><img src="images/templatemo_serviceimg1.png" alt="templatemo_frame"></div>
+                            <a href="images/service/1.jpg" data-rel="lightbox" class="fa fa-search-plus"></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 templatemo_service">
+                    <div class="templatemo_service_title">認識校園</div>
+                    <div class="templatemo_service_subtitle">字面上意思</div>
+                    <div class="templatemo_service_text">
+                        <p>簡單說明一館二館三館五館六館七館，沒有四館沒有四館沒有四館</p>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="templatemo_morebutton"><a href="#">READ MORE</a></div>
+                </div>
+            </div>
+            <div class="row templatemo_ordering">
+                <div class="col-md-6 templatemo_service one">
+                    <div class="templatemo_service_title">踏入新生活圈</div>
+                    <div class="templatemo_service_subtitle">認識新朋友與學長姐</div>
+                    <div class="templatemo_service_text">
+                        <p>包含各類互動&破冰遊戲，還有學長姐的八卦時間</p>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="templatemo_morebutton"><a href="#">READ MORE</a></div>
+                </div>
+                <div class="col-md-6 templatemo_service two">
+                    <div class="gallery-item">
+                        <img src="images/service/2.png" alt="gallery 2">
+                        <div class="templatemo_service_frame"><img src="images/templatemo_serviceimg.png" alt="templatemo_frame"></div>
+                        <div class="overlay">
+                            <div class="templatemo_service_frame"><img src="images/templatemo_serviceimg1.png" alt="templatemo_frame"></div>
+                            <a href="images/service/2.png" data-rel="lightbox" class="fa fa-search-plus"></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 templatemo_service">
+                    <div class="gallery-item">
+                        <img src="images/service/3.png" alt="gallery 3">
+                        <div class="templatemo_service_frame"><img src="images/templatemo_serviceimg.png" alt="templatemo_frame"></div>
+                        <div class="overlay">
+                            <div class="templatemo_service_frame"><img src="images/templatemo_serviceimg1.png" alt="templatemo_frame"></div>
+                            <a href="images/service/3.png" data-rel="lightbox" class="fa fa-search-plus"></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 templatemo_service">
+                    <div class="templatemo_service_title">精彩晚會活動</div>
+                    <div class="templatemo_service_subtitle">準備好了就給我 嗨起來!!!</div>
+                    <div class="templatemo_service_text">
+                        <p>各大社團表演與驚喜環節</p>
+                        <div class="clear"></div>
+                    </div>
+                    <div class="templatemo_morebutton"><a href="#">READ MORE</a></div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6"></div>
+                <div class="col-md-6">
+                    <div class="templatemo_separater">
+                        <span class="page">2</span>
+                    </div>
+                </div>
+            </div>
+            <!-- service end -->
+            <!-- promotion start -->
+            <div id="templatemo_packages" class="row">
+                <div class="col-md-12">
+                    <div class="templatemo_pricing_title">NOTICE</div>
+                    <div class="templatemo_pricing_subtitle">關於四系迎新的注意事項&活動公告</div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="templatemo_pricing_table">
+                        <div class="templatemo_pricingbg">
+                            <img src="images/templatemo_pricing_bg.jpg" alt="templatemo price img">
+                        </div>
+                        <div class="templatemo_pricing_box">
+                            <span class="price_title">個人攜帶物</span>
+                            <span class="sign">*</span><span class="price">5</span> <span class="month">項    </span>
+                        </div>
+                        <div class="templatemo_pricing_list">
+                            <ul>
+                            	<li>身分證</li>
+                                <li>水壺</li>
+                                <li>環保餐具</li>
+                                <li>替換衣物</li>
+                                <li>一顆熱情的心</li>
+                                
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="templatemo_pricing_table">
+                        <div class="templatemo_pricingbg">
+                            <img src="images/templatemo_pricing_bg.jpg" alt="templatemo price img">
+                        </div>
+                        <div class="templatemo_pricing_box">
+                            <span class="price_title">活動前準備</span>
+                            <span class="sign">*</span><span class="price">3 </span> <span class="month">點    </span>
+                        </div>
+                        <div class="templatemo_pricing_list">
+                            <ul>
+                            	<li>準時報到、確認地點與時間(元智大學活動中心)</li>
+                                <li>穿著輕鬆、方便活動</li>
+                                <li>保持開放心態</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="templatemo_pricing_table">
+                        <div class="templatemo_pricingbg">
+                            <img src="images/templatemo_pricing_bg.jpg" alt="templatemo price img">
+                        </div>
+                        <div class="templatemo_pricing_box">
+                            <span class="price_title">活動遊戲</span>
+                            <span class="sign">*</span><span class="price">5 </span> <span class="month">項    </span>
+                        </div>
+                        <div class="templatemo_pricing_list">
+                            <ul>
+                                <li>破冰遊戲</li>
+                                <li>解謎活動</li>
+                                <li>大地遊戲</li>
+                                <li>大逃殺</li>
+                                <li>晚會活動</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6"></div>
+                <div class="col-md-6">
+                    <div class="templatemo_separater">
+                        <span class="page">3</span>
+                    </div>
+                </div>
+            </div>
+            <!-- promotion end -->
+            <!-- work start -->
+            <div id="templatemo_about" class="row">
+    <div class="templatemo_contacttitle">報名表單</div>
+                    <div class="templatemo_sub_contacttitle">一定要來喔!!!</div>
+    <style>
+      .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+      .form-grid .full{grid-column:1 / -1}
+      .form-card{background:rgba(255,255,255,.06);backdrop-filter:blur(6px);padding:16px;border-radius:12px}
+      @media(max-width:768px){ .form-grid{grid-template-columns:1fr} }
+    </style>
+
+    <form class="form-card" action="submit.php" method="post" novalidate id="signupForm">
+  <div class="form-grid">
+
+    <div class="form-field">
+      <div class="error-msg"></div>
+      <label>姓名*</label>
+      <input type="text" name="name" required placeholder="陳同學" />
+    </div>
+
+    <div class="form-field">
+      <div class="error-msg"></div>
+      <label>Email*</label>
+      <input type="email" name="email" required placeholder="you@gmail.com" />
+    </div>
+
+    <div class="form-field">
+      <div class="error-msg"></div>
+      <label>手機*</label>
+      <input type="tel" name="phone" required pattern="^09\d{8}$" placeholder="09xxxxxxxx" />
+      <small>格式：09 開頭 共10碼</small>
+    </div>
+
+    <div class="form-field">
+      <div class="error-msg"></div>
+      <label>家用電話*</label>
+      <input type="tel" name="home" required
+  pattern="^(\(0\d{1,2}\)\s?\d{3,4}-\d{3,4}|0\d{1,2}[-\s]?\d{3,4}[-\s]?\d{3,4})$"
+  placeholder="(02) 1234-5678" />
+
+    </div>
+
+    <div class="form-field">
+      <div class="error-msg"></div>
+      <label>學號*</label>
+      <input type="text" name="sid" required pattern="^s\d{7}$" placeholder="s1234567" />
+    </div>
+
+    <!-- radio 群組：把整組包在一個 .form-field 裡 -->
+    <div class="full form-field">
+      <div class="error-msg"></div>
+      <label>系別*</label><br>
+      <label><input type="radio" name="dept" value="資工" required> 資工</label>
+      <label><input type="radio" name="dept" value="資管"> 資管</label>
+      <label><input type="radio" name="dept" value="資傳"> 資傳</label>
+      <label><input type="radio" name="dept" value="資英"> 資英</label>
+    </div>
+
+    <div class="full form-field">
+      <div class="error-msg"></div>
+      <label>餐食與需求（可複選）</label><br>
+      <label><input type="checkbox" name="needs[]" value="素食"> 素食</label>
+      <label><input type="checkbox" name="needs[]" value="葷食"> 葷食</label>
+      <label><input type="checkbox" name="needs[]" value="不含香菜"> 不含香菜</label>
+      <label><input type="checkbox" name="needs[]" value="不訂餐"> 不訂餐</label>
+    </div>
+
+    <div class="full form-field">
+      <div class="error-msg"></div>
+      <label>備註</label>
+      <textarea name="note" rows="3" maxlength="200" placeholder="其他需求…"></textarea>
+    </div>
+
+  </div>
+  <button type="submit" style="margin-top:12px;padding:10px 18px;border-radius:10px;background:#6c5ce7;color:#fff;border:0;cursor:pointer">送出報名</button>
+</form>
+
+<script>
+(() => {
+  const form = document.getElementById('signupForm');
+  if (!form) return;
+
+  // 取得欄位對應的錯誤訊息容器
+  const msgBox = el => (el.closest('.form-field') || el.parentElement).querySelector('.error-msg');
+
+  // 自訂訊息（依欄位/規則調整）
+  function customMessage(el){
+    if (el.validity.valueMissing) return '此欄位必填';
+    if (el.name === 'email' && el.validity.typeMismatch) return '請輸入有效的 Email';
+    if (el.name === 'phone' && el.validity.patternMismatch) return '手機需為 09 開頭 10 碼';
+    if (el.name === 'home'  && el.validity.patternMismatch) return '請依格式輸入：(02) 1234-5678';
+    if (el.name === 'sid'   && el.validity.patternMismatch) return '學號格式：s + 7 位數';
+    return el.validationMessage || '請符合要求的格式';
+  }
+
+  // 顯示錯誤泡泡
+  function showError(el){
+    const box = msgBox(el);
+    if (!box) return;
+    box.textContent = customMessage(el);
+    box.style.display = 'block';
+  }
+  function clearError(el){
+    const box = msgBox(el);
+    if (!box) return;
+    box.style.display = 'none';
+    box.textContent = '';
+  }
+
+  // 送出時檢查
+  form.addEventListener('submit', (e) => {
+    let firstInvalid = null;
+
+    // 檢查一般欄位
+    const fields = form.querySelectorAll('input, textarea, select');
+    fields.forEach(el => clearError(el)); // 先清空
+
+    fields.forEach(el => {
+      // radio 群組另外處理
+      if (el.type === 'radio') return;
+      if (!el.checkValidity()){
+        if (!firstInvalid) firstInvalid = el;
+        showError(el);
+      }
+    });
+
+    // 檢查 radio 群組（dept）
+    const radios = form.querySelectorAll('input[name="dept"]');
+    if (radios.length){
+      const anyChecked = Array.from(radios).some(r => r.checked);
+      if (!anyChecked){
+        const box = msgBox(radios[0]);
+        box.textContent = '請選擇系別';
+        box.style.display = 'block';
+        if (!firstInvalid) firstInvalid = radios[0];
+      }
+    }
+
+    if (firstInvalid){
+      e.preventDefault();
+      // 捲到第一個錯誤並聚焦
+      const top = (firstInvalid.closest('.form-field') || firstInvalid).getBoundingClientRect().top + window.scrollY - 80;
+      window.scrollTo({ top, behavior: 'smooth' });
+      firstInvalid.focus({ preventScroll: true });
+    }
+  });
+
+  // 即時清錯 / 重新檢測
+  form.addEventListener('input', (e) => {
+    const el = e.target;
+    if (el.matches('input, textarea, select')){
+      if (el.checkValidity()) clearError(el);
+      else showError(el);
+    }
+  });
+  // radio 點選時清錯
+  form.addEventListener('change', (e) => {
+    if (e.target.name === 'dept'){
+      const box = msgBox(e.target);
+      if (box){ box.style.display = 'none'; box.textContent = ''; }
+    }
+  });
+})();
+</script>
+
+
+  </div>
+
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6"></div>
+                <div class="col-md-6">
+                    <div class="templatemo_separater">
+                        <span class="page">4</span>
+                    </div>
+                </div>
+            </div>
+            <!-- work end -->
+            <!-- contact start -->
+            <div id="templatemo_contact" class="row templatemo_contact">
+                <div class="col-md-12">
+                    <div class="templatemo_contacttitle">ABOUT</div>
+                    <div class="templatemo_sub_contacttitle">活動地址&寫信回饋</div>
+                </div>
+                <div class="col-md-4 templatemo_contactform">
+                    <form action="#" method="post" >
+                        <input type="text" name="subject" id="subject" class="subject" placeholder="SUBJECT">
+                        <textarea name="message" class="message" placeholder="MESSAGE ... " id="message"></textarea>
+                        <div class="clear"></div>
+                        <button type="button" class="btn btn-primary">SEND</button>
+                  	</form>
+                </div>
+                <div class="col-md-8">
+                    <div class="templatemo_contactmap">
+                        <div id="templatemo_map"></div>
+                        <div class="templatemo_mapcorner"><img src="images/templatemo_mapcorner.png" alt="Google Maps"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- contact end -->
+        <div class="templatemo_footer">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-12">
+                    	&copy; 2026 <a href="#">YZU迎新活動組</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+(() => {
+  const canvas = document.getElementById('geoParticles');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  const DPR = Math.min(2, window.devicePixelRatio || 1);
+  let W, H, particles = [], running = true;
+
+  // 偏好「減少動態」時停用
+  const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (mq.matches) running = false;
+
+  function resize() {
+    W = canvas.clientWidth = window.innerWidth;
+    H = canvas.clientHeight = window.innerHeight;
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    // 依畫面大小調整數量
+    const target = Math.round((W * H) / 30000); // 面積基準：數量不會太多
+    if (particles.length < target) addParticles(target - particles.length);
+    if (particles.length > target) particles.length = target;
+  }
+
+  function rand(a, b) { return a + Math.random() * (b - a); }
+  function pick(arr) { return arr[(Math.random() * arr.length) | 0]; }
+
+  function createParticle() {
+    const shapes = ['circle', 'triangle', 'hex'];
+    const size = rand(6, 18); // 幾何尺寸
+    const speed = rand(18, 60) / 100; // 垂直速度(px/frame)
+    const drift = rand(-0.25, 0.25);  // 水平飄移
+    const x = rand(-50, W + 50);
+    const y = rand(-H, -20);          // 從上方進場
+    const rot = rand(0, Math.PI * 2);
+    const rotSpeed = rand(-0.01, 0.01);
+
+    // 紫藍青色系，透明一點不會「遮」
+    const palette = [
+      'rgba(138, 43, 226, 0.25)',  // blueviolet
+      'rgba(10, 160, 255, 0.22)',  // cyan-ish
+      'rgba(120, 180, 255, 0.18)',
+      'rgba(180, 120, 255, 0.20)'
+    ];
+
+    return {
+      shape: pick(shapes),
+      x, y, size, speed, drift, rot, rotSpeed,
+      color: pick(palette),
+      blur: rand(0, 1) > 0.6 ? 2 : 0   // 少數帶點柔焦
+    };
+  }
+
+  function addParticles(n) {
+    for (let i = 0; i < n; i++) particles.push(createParticle());
+  }
+
+  function drawParticle(p) {
+    ctx.save();
+    if (p.blur) ctx.filter = `blur(${p.blur}px)`;
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    ctx.fillStyle = p.color;
+
+    switch (p.shape) {
+      case 'circle':
+        ctx.beginPath();
+        ctx.arc(0, 0, p.size * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      case 'triangle':
+        const s = p.size;
+        ctx.beginPath();
+        ctx.moveTo(0, -s);
+        ctx.lineTo(s * 0.9, s * 0.7);
+        ctx.lineTo(-s * 0.9, s * 0.7);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      case 'hex':
+        const r = p.size * 0.75, step = Math.PI / 3;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const a = i * step;
+          const vx = Math.cos(a) * r, vy = Math.sin(a) * r;
+          i ? ctx.lineTo(vx, vy) : ctx.moveTo(vx, vy);
+        }
+        ctx.closePath();
+        ctx.fill();
+        break;
+    }
+    ctx.restore();
+  }
+
+  function update(p) {
+    p.y += p.speed * 2.2;   // 下落
+    p.x += p.drift;         // 微量左右漂移
+    p.rot += p.rotSpeed;    // 旋轉
+    // 超出底部就重生到上方
+    if (p.y > H + 40) {
+      p.x = rand(-50, W + 50);
+      p.y = rand(-H * 0.3, -20);
+      p.rot = rand(0, Math.PI * 2);
+    }
+  }
+
+  function loop() {
+    if (!running) return;
+    ctx.clearRect(0, 0, W, H); // 透明清屏，不遮住底圖
+    // 陰影很輕微，增加立體感；不想要可以註解掉
+    ctx.shadowColor = 'rgba(0,0,0,0.15)';
+    ctx.shadowBlur = 0;
+
+    for (const p of particles) {
+      update(p);
+      drawParticle(p);
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // 初始化
+  resize();
+  window.addEventListener('resize', resize);
+  if (running) loop();
+
+  // 跳頁/切分頁時降載
+  document.addEventListener('visibilitychange', () => {
+    running = !mq.matches && document.visibilityState === 'visible';
+    if (running) requestAnimationFrame(loop);
+  });
+})();
+</script>
+<script>
+(() => {
+  const $box = document.getElementById('countdown');
+  if (!$box) return;
+
+  const deadlineStr = $box.getAttribute('data-deadline');
+  const deadline = new Date(deadlineStr);
+  if (isNaN(+deadline)) {
+    console.warn('[countdown] 無效的 data-deadline：', deadlineStr);
+    return;
+  }
+
+  const $d = $box.querySelector('.num[data-unit="days"]');
+  const $h = $box.querySelector('.num[data-unit="hours"]');
+  const $m = $box.querySelector('.num[data-unit="minutes"]');
+  const $s = $box.querySelector('.num[data-unit="seconds"]');
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+
+  function setNum($el, val){
+    if (!$el) return;
+    const txt = $el.textContent;
+    if (txt !== val){
+      $el.textContent = val;
+      $el.classList.remove('tick'); // 觸發重播
+      // 讓瀏覽器重繪以重置動畫
+      void $el.offsetWidth;
+      $el.classList.add('tick');
+    }
+  }
+
+  function render(){
+    const now = new Date();
+    let diff = Math.max(0, deadline - now); // ms
+
+    const sec = Math.floor(diff / 1000);
+    const d = Math.floor(sec / 86400);
+    const h = Math.floor((sec % 86400) / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+
+    setNum($d, String(d));        // 天不補 0，保留原樣
+    setNum($h, pad(h));
+    setNum($m, pad(m));
+    setNum($s, pad(s));
+
+    if (sec <= 0){
+      clearInterval(tid);
+    }
+  }
+
+  render();
+  const tid = setInterval(render, 1000);
+
+  // 分頁切換時節能
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) clearInterval(tid);
+    else render(), setInterval(render, 1000);
+  });
+})();
+</script>
+
+<!-- PWA Service Worker Registration -->
+<script>
+// ====== PWA Service Worker 註冊 (修改版) ======
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    // 改用相對路徑,適用於任何環境
+    navigator.serviceWorker.register('./sw.js', {
+      scope: './'  // 明確指定作用範圍
+    })
+      .then((registration) => {
+        console.log('✅ Service Worker 註冊成功:', registration.scope);
+        
+        // 檢查更新
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          console.log('🔄 發現 SW 更新');
+          
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // 有新版本,提示使用者重新載入
+              if (confirm('🎉 四系迎新有新版本!點擊確定更新')) {
+                window.location.reload();
+              }
+            }
+          });
+        });
+      })
+      .catch((err) => {
+        console.error('❌ Service Worker 註冊失敗:', err);
+        // localhost 應該要成功,如果失敗顯示詳細錯誤
+        console.error('錯誤詳情:', {
+          message: err.message,
+          protocol: location.protocol,
+          hostname: location.hostname
+        });
+      });
+  });
+  
+  // 監聽 SW 控制器變更
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    console.log('🔄 SW 控制器已更新');
+  });
+}
+
+// ====== PWA 安裝提示 ======
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  console.log('🎯 PWA 可安裝事件觸發');
+  e.preventDefault();
+  deferredPrompt = e;
+
+  // 延遲 15 秒
+  setTimeout(() => {
+    showInstallButton();
+  }, 15000);
+});
+
+function showInstallButton() {
+  // 檢查是否已經有按鈕
+  if (document.querySelector('.pwa-install-btn')) return;
+  
+  const installBtn = document.createElement('button');
+  installBtn.className = 'pwa-install-btn';
+  installBtn.innerHTML = '📱 安裝 APP';
+  installBtn.style.cssText = `
+    position: fixed;
+    bottom: 180px;
+    right: 20px;
+    z-index: 9999;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 30px;
+    font-weight: bold;
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    animation: pulse 2s infinite;
+  `;
+  
+  // 添加 CSS 動畫
+  if (!document.getElementById('pwa-install-styles')) {
+    const style = document.createElement('style');
+    style.id = 'pwa-install-styles';
+    style.textContent = `
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
+      .pwa-install-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 25px rgba(102, 126, 234, 0.5);
+      }
+      .pwa-install-btn:active {
+        transform: translateY(0);
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  installBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) {
+      // 如果沒有 prompt,給予提示
+      const msg = location.protocol === 'https:' || location.hostname === 'localhost'
+        ? '請重新整理頁面或使用 Chrome/Edge 瀏覽器'
+        : '⚠️ PWA 需要 HTTPS 或 localhost 環境';
+      alert(msg);
+      return;
+    }
+    
+    // 顯示安裝提示
+    deferredPrompt.prompt();
+    
+    // 等待使用者回應
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`使用者選擇: ${outcome}`);
+    
+    if (outcome === 'accepted') {
+      console.log('✅ 使用者接受安裝');
+    } else {
+      console.log('❌ 使用者拒絕安裝');
+    }
+    
+    // 清除 prompt
+    deferredPrompt = null;
+    installBtn.remove();
+  });
+  
+  document.body.appendChild(installBtn);
+  
+  // 30 秒後自動隱藏
+  setTimeout(() => {
+    if (installBtn.parentElement) {
+      installBtn.style.opacity = '0';
+      setTimeout(() => installBtn.remove(), 300);
+    }
+  }, 30000);
+}
+
+// 監聽安裝成功
+window.addEventListener('appinstalled', () => {
+  console.log('✅ PWA 安裝成功!');
+  deferredPrompt = null;
+  
+  // 移除安裝按鈕
+  const btn = document.querySelector('.pwa-install-btn');
+  if (btn) btn.remove();
+});
+
+// ====== 除錯資訊 (開發時使用) ======
+console.log('🔍 PWA 環境檢查:', {
+  'Service Worker 支援': 'serviceWorker' in navigator,
+  '當前協議': location.protocol,
+  '主機名稱': location.hostname,
+  '完整網址': location.href,
+  '是否安全環境': location.protocol === 'https:' || location.hostname === 'localhost'
+});
+</script>
+
+</body>
+</html>

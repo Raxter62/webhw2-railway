@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA 環境診斷工具</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .result {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #ddd;
+        }
+        .result.success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .result.warning {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+        .result.error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .label {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+        .value {
+            font-family: 'Courier New', monospace;
+            color: #212529;
+            word-break: break-all;
+        }
+        .icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 20px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .conclusion {
+            margin-top: 20px;
+            padding: 20px;
+            background: #e7f3ff;
+            border-radius: 12px;
+            border: 2px solid #667eea;
+        }
+        .conclusion h2 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .steps {
+            margin-top: 15px;
+            padding-left: 20px;
+        }
+        .steps li {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 PWA 環境診斷工具</h1>
+        <p style="text-align: center; color: #6c757d; margin-bottom: 20px;">
+            檢查你的網頁是否支援 PWA
+        </p>
+
+        <div id="results"></div>
+        
+        <button id="testBtn" onclick="runTest()">開始檢測</button>
+        <button id="testSW" onclick="testServiceWorker()" style="display: none; margin-top: 10px; background: #28a745;">
+            測試註冊 Service Worker
+        </button>
+        
+        <div id="conclusion" style="display: none;"></div>
+    </div>
+
+    <script>
+        function runTest() {
+            const results = document.getElementById('results');
+            const conclusion = document.getElementById('conclusion');
+            const testBtn = document.getElementById('testBtn');
+            const testSWBtn = document.getElementById('testSW');
+            
+            results.innerHTML = '';
+            conclusion.style.display = 'none';
+            testBtn.disabled = true;
+            testBtn.textContent = '檢測中...';
+            
+            // 收集所有檢測結果
+            const checks = [];
+            
+            // 1. 基本資訊
+            addResult('🌐 當前網址', location.href, 'success');
+            addResult('📡 協議', location.protocol, 
+                location.protocol === 'https:' ? 'success' : 'error');
+            addResult('🖥️ 主機名稱', location.hostname, 'success');
+            
+            // 2. 安全上下文檢查
+            const isSecure = window.isSecureContext;
+            checks.push({
+                name: '安全上下文',
+                pass: isSecure,
+                critical: true
+            });
+            addResult('🔒 安全上下文 (isSecureContext)', 
+                isSecure ? '✅ 是' : '❌ 否', 
+                isSecure ? 'success' : 'error');
+            
+            // 3. Service Worker 支援
+            const hasSW = 'serviceWorker' in navigator;
+            checks.push({
+                name: 'Service Worker',
+                pass: hasSW,
+                critical: true
+            });
+            addResult('⚙️ Service Worker 支援', 
+                hasSW ? '✅ 支援' : '❌ 不支援', 
+                hasSW ? 'success' : 'error');
+            
+            // 4. 內網判斷
+            const isLocalhost = location.hostname === 'localhost' || 
+                              location.hostname === '127.0.0.1';
+            const isPrivateIP = /^(192\.168|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(location.hostname);
+            const isSchoolIP = /^140\.138\./.test(location.hostname);
+            
+            addResult('🏠 Localhost', 
+                isLocalhost ? '✅ 是' : '❌ 否', 
+                isLocalhost ? 'success' : 'warning');
+            addResult('🏢 私有 IP (192.168/10.x)', 
+                isPrivateIP ? '✅ 是' : '❌ 否', 
+                isPrivateIP ? 'success' : 'warning');
+            addResult('🎓 學校 IP (140.138.x.x)', 
+                isSchoolIP ? '✅ 是' : '❌ 否', 
+                isSchoolIP ? 'success' : 'warning');
+            
+            // 5. 瀏覽器資訊
+            addResult('🌍 瀏覽器', navigator.userAgent.match(/(Chrome|Firefox|Safari|Edge)\/[\d.]+/)?.[0] || 'Unknown', 'success');
+            
+            // 6. PWA 功能支援
+            addResult('📱 Manifest 支援', 
+                'onbeforeinstallprompt' in window ? '✅ 支援' : '⚠️ 可能不支援', 
+                'onbeforeinstallprompt' in window ? 'success' : 'warning');
+            
+            // 7. 儲存 API
+            addResult('💾 localStorage', 
+                typeof localStorage !== 'undefined' ? '✅ 可用' : '❌ 不可用', 
+                typeof localStorage !== 'undefined' ? 'success' : 'error');
+            
+            // 8. 網路狀態
+            addResult('📶 網路狀態', 
+                navigator.onLine ? '✅ 線上' : '❌ 離線', 
+                navigator.onLine ? 'success' : 'warning');
+            
+            // 生成結論
+            setTimeout(() => {
+                generateConclusion(checks, isSecure, hasSW);
+                testBtn.disabled = false;
+                testBtn.textContent = '重新檢測';
+                
+                // 如果基本條件滿足，顯示 SW 測試按鈕
+                if (isSecure && hasSW) {
+                    testSWBtn.style.display = 'block';
+                }
+            }, 500);
+        }
+        
+        function addResult(label, value, type = 'success') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `
+                <div class="label">${label}</div>
+                <div class="value">${value}</div>
+            `;
+            results.appendChild(div);
+        }
+        
+        function generateConclusion(checks, isSecure, hasSW) {
+            const conclusion = document.getElementById('conclusion');
+            conclusion.style.display = 'block';
+            
+            const allPass = checks.every(c => c.pass);
+            
+            let html = '<h2>';
+            let message = '';
+            let steps = [];
+            
+            if (allPass) {
+                html += '🎉 恭喜！你的環境支援 PWA！';
+                message = '所有必要條件都已滿足，可以正常使用 Service Worker 和離線功能。';
+                steps = [
+                    '點擊下方「測試註冊 Service Worker」按鈕',
+                    '確認註冊成功後，重新整理頁面',
+                    '在 Chrome DevTools > Application > Service Workers 查看狀態',
+                    '測試離線模式（DevTools > Network > Offline）'
+                ];
+            } else if (!isSecure) {
+                html += '❌ 無法使用完整 PWA 功能';
+                message = '<strong>原因：</strong>你的網址使用 HTTP 協議，且不符合瀏覽器的安全例外條件。<br><br>' +
+                         '<strong>140.138.x.x 雖然是學校內網，但瀏覽器仍視為公開 IP，必須使用 HTTPS。</strong>';
+                steps = [
+                    '<strong>方案 1 (推薦)：</strong>使用 ngrok 建立 HTTPS 通道',
+                    '<strong>方案 2：</strong>請系統管理員在伺服器上設定 HTTPS',
+                    '<strong>方案 3：</strong>使用降級方案（僅保留基本功能）'
+                ];
+            } else if (!hasSW) {
+                html += '⚠️ 瀏覽器不支援 Service Worker';
+                message = '請更新瀏覽器至最新版本，或使用 Chrome/Edge/Firefox 等現代瀏覽器。';
+                steps = [
+                    '更新瀏覽器到最新版本',
+                    '建議使用 Chrome 89+ 或 Edge 89+',
+                    '確認瀏覽器未停用 Service Worker 功能'
+                ];
+            }
+            
+            html += '</h2><p style="margin-top: 10px; line-height: 1.6;">' + message + '</p>';
+            
+            if (steps.length > 0) {
+                html += '<h3 style="margin-top: 15px; color: #495057;">📋 建議步驟：</h3><ol class="steps">';
+                steps.forEach(step => {
+                    html += `<li>${step}</li>`;
+                });
+                html += '</ol>';
+            }
+            
+            conclusion.innerHTML = html;
+        }
+        
+        async function testServiceWorker() {
+            const testSWBtn = document.getElementById('testSW');
+            testSWBtn.disabled = true;
+            testSWBtn.textContent = '註冊中...';
+            
+            try {
+                // 創建一個簡單的 test-sw.js
+                const swCode = `
+                    self.addEventListener('install', (e) => {
+                        console.log('Test SW: Installed');
+                        self.skipWaiting();
+                    });
+                    self.addEventListener('activate', (e) => {
+                        console.log('Test SW: Activated');
+                        e.waitUntil(self.clients.claim());
+                    });
+                    self.addEventListener('fetch', (e) => {
+                        e.respondWith(fetch(e.request));
+                    });
+                `;
+                
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const swURL = URL.createObjectURL(blob);
+                
+                const registration = await navigator.serviceWorker.register(swURL);
+                
+                addResult('✅ Service Worker 註冊', '成功！', 'success');
+                addResult('📍 Scope', registration.scope, 'success');
+                
+                testSWBtn.textContent = '✅ 註冊成功！';
+                testSWBtn.style.background = '#28a745';
+                
+                alert('🎉 Service Worker 註冊成功！\n\n你的環境完全支援 PWA！\n\n現在可以使用完整的離線功能了。');
+                
+            } catch (error) {
+                addResult('❌ Service Worker 註冊', `失敗: ${error.message}`, 'error');
+                testSWBtn.textContent = '❌ 註冊失敗';
+                testSWBtn.style.background = '#dc3545';
+                testSWBtn.disabled = false;
+                
+                alert('❌ Service Worker 註冊失敗！\n\n錯誤：' + error.message + '\n\n這代表你的環境不支援 PWA，需要改用 HTTPS。');
+            }
+        }
+        
+        // 頁面載入時自動檢測
+        window.addEventListener('load', runTest);
+    </script>
+</body>
+</html>
