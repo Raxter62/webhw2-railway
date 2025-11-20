@@ -8,33 +8,6 @@ ini_set('display_errors', 1);
 /* === 1) 站點設定 === */
 require __DIR__ . '/config.php';
 
-/* 寄信設定 */
-// Mail settings - host/port kept here; credentials moved to .env
-$MAIL_HOST = 'smtp.gmail.com';
-$MAIL_PORT = 587;
-
-// Simple .env loader (if you use vlucas/phpdotenv you can replace this)
-$envPath = __DIR__ . '/.env';
-if (file_exists($envPath)) {
-    $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        $line = trim($line);
-        if ($line === '' || $line[0] === '#') continue;
-        if (strpos($line, '=') === false) continue;
-        list($key, $val) = explode('=', $line, 2);
-        $key = trim($key);
-        $val = trim($val);
-        $val = trim($val, "\"'"); // remove surrounding quotes
-        putenv("$key=$val");
-        $_ENV[$key] = $val;
-        $_SERVER[$key] = $val;
-    }
-}
-
-// Read mail credentials from environment
-$MAIL_USER = getenv('MAIL_USER') ?: '';
-$MAIL_PASS = getenv('MAIL_PASS') ?: '';
-$MAIL_FROM_NAME = '四系迎新報名';
 
 /* === 2) 載入外部套件 === */
 use PHPMailer\PHPMailer\PHPMailer;
