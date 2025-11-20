@@ -6,6 +6,9 @@ date_default_timezone_set('Asia/Taipei');
 // ===== Line Bot 設定 =====
 require __DIR__ . '/config.php';
 
+// Debug：看 secret 有沒有讀到
+error_log('CHANNEL_SECRET length = ' . strlen((string)$CHANNEL_SECRET));
+
 
 // ===== 驗證 Line Webhook Signature =====
 function verifySignature($channelSecret, $httpRequestBody, $signature) {
@@ -120,6 +123,7 @@ try {
     
     // 驗證簽章
     if (!verifySignature($CHANNEL_SECRET, $httpRequestBody, $signature)) {
+        error_log('Signature check failed');
         http_response_code(403);
         exit('Invalid signature');
     }
