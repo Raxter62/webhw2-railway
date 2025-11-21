@@ -9,15 +9,17 @@ ini_set('display_errors', 1);
 require __DIR__ . '/config.php';
 
 
-/* === 2) 載入外部套件 === */
+/* === 2) 載入外部套件 === */ 
+/*使用HTTP API 因此phpmailer SMTP 相關註解掉
 use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+use PHPMailer\PHPMailer\Exception; */
 
 try {
+    /*phpmailer 相關註解掉
     require __DIR__ . '/PHPMailer/src/PHPMailer.php';
     require __DIR__ . '/PHPMailer/src/SMTP.php';
-    require __DIR__ . '/PHPMailer/src/Exception.php';
-    require __DIR__ . '/TCPDF/tcpdf.php';
+    require __DIR__ . '/PHPMailer/src/Exception.php'; */
+    require __DIR__ . '/TCPDF/tcpdf.php'; 
     
     $qrLibPath = __DIR__ . '/phpqrcode/phpqrcode.php';
     if (!file_exists($qrLibPath)) $qrLibPath = __DIR__ . '/phpqrcode/qrlib.php';
@@ -334,7 +336,8 @@ try {
     error_log("Database update failed: " . $e->getMessage());
 }
 
-/* === 9) 寄送確認信 === */
+/* === 9) 寄送確認信 === SMTP版 */
+/*
 $mailSent = false;
 $mail = new PHPMailer(true);
 try {
@@ -357,7 +360,7 @@ try {
     $infoHtml = nl2br(htmlspecialchars(
         "姓名:{$name}\nEmail:{$email}\n手機:{$phone}\n家用電話:{$home}\n學號:{$sid}\n系別:{$dept}\n餐飲與需求:{$needsTxt}\n備註:{$note}"
     ));
-    
+
     // 郵件內容 - 包含 PDF QR Code 和 LINE 加好友 QR Code
     $mail->Body = "
         {$name} 您好,<br><br>
@@ -414,6 +417,127 @@ try {
     error_log("Mail sending failed: " . $mail->ErrorInfo);
     // ⚠️ 測試用：直接在頁面上顯示（測完記得關掉）
     echo '<pre>Mail error: ' . htmlspecialchars($mail->ErrorInfo, ENT_QUOTES, 'UTF-8') . "</pre>";
+}
+
+$conn->close();
+ */
+
+/* === 9) 寄送確認信 === HTTP API版 */
+$mailSent = false;
+$mailError = '';
+try {
+    if (empty($RESEND_API_KEY)) {
+        throw new Exception("未設定 RESEND_API_KEY");
+    }
+
+    $needsTxt = $needs ? implode('、', array_map('htmlspecialchars', $needs)) : '無';
+    $infoHtml = nl2br(htmlspecialchars(
+        "姓名:{$name}\nEmail:{$email}\n手機:{$phone}\n家用電話:{$home}\n學號:{$sid}\n系別:{$dept}\n餐飲與需求:{$needsTxt}\n備註:{$note}"
+    ));
+
+    // 關鍵修正：直接將圖片轉為 base64 嵌入 HTML，而非使用 cid
+    $qrImageData = !empty($qrBase64) ? "data:image/png;base64,{$qrBase64}" : '';
+    $lineQrImageData = !empty($lineQrBase64) ? "data:image/png;base64,{$lineQrBase64}" : '';
+    
+    // 郵件內容 - 包含 PDF QR Code 和 LINE 加好友 QR Code
+    $emailBody = "
+        {$name} 您好,<br><br>
+        感謝您報名 <strong>四系迎新「緣分讓我們相遇在光年資外」</strong>!<br><br>
+        您的報名資料:<br>
+        <div style='font-family:monospace; background:#f6f8fa; padding:15px; border-radius:8px; margin:15px 0; border-left:4px solid #7cb342;'>{$infoHtml}</div>
+      
+        <div style='margin: 30px 0;'>
+            <h3 style='color: #4a2c6b;'>📱 掃描下方 QR Code 查看報名表</h3>
+            <div style='text-align:center; margin:20px 0;'>
+                <img src='cid:qrcode_image' alt='報名表 QR Code' style='max-width:250px; border:2px solid #4a2c6b; border-radius:8px; padding:10px;' />
+            </div>
+        </div>
+        
+        <div style='margin: 30px 0; background: #e8f5e9; padding: 20px; border-radius: 8px; border: 2px solid #7cb342;'>
+            <h3 style='color: #2d5016; margin-bottom: 15px;'>💚 加入 LINE 官方帳號接收最新消息</h3>
+            <div style='text-align:center; margin:20px 0;'>
+                <img src='cid:line_qrcode_image' alt='LINE 加好友 QR Code' style='max-width:250px; border:2px solid #00B900; border-radius:8px; padding:10px; background: white;' />
+            </div>
+            <p style='text-align:center; color:#2d5016; font-weight:bold;'>掃描 QR Code 或點擊連結加入:</p>
+            <p style='text-align:center;'><a href='{$lineAddFriendURL}' style='color:#00B900; font-weight:bold; text-decoration:none;'>{$lineAddFriendURL}</a></p>
+        </div>
+        
+        <p style='font-size:12px; color:#666;'>PDF 報名表和 QR Code 已作為附件一併寄送,請查收。</p>
+        <hr style='margin:20px 0; border:none; border-top:1px solid #ddd;'>
+        <p style='font-size:11px; color:#999;'>此為系統自動發送的確認信,請勿直接回覆。</p>
+    ";
+    
+    // 準備附件
+    $attachments = [];
+
+    // 附件 1: PDF 報名表
+    if (!empty($pdfContent)) {
+        $pdfFilename = 'Registration_' . preg_replace('/[^a-zA-Z0-9_-]/', '', $sid) . '_' . preg_replace('/[^a-zA-Z0-9_-]/', '', $name) . '.pdf';
+        $attachments[] = [
+            'filename' => $pdfFilename,
+            'content' => $pdfBase64,
+        ];
+    }
+    
+    // 附件 2: PDF QR Code 圖片(同時作為內嵌圖片)
+    if (!empty($qrBase64)) {
+        
+        $qrFilename = 'QRCode_' . preg_replace('/[^a-zA-Z0-9_-]/', '', $sid) . '.png';
+        $attachments[] = [
+            'filename' => $qrFilename,
+            'content' => $qrBase64,
+        ];
+    }
+    
+    // 附件 3: LINE 加好友 QR Code 圖片(同時作為內嵌圖片)
+    if (!empty($lineQrBase64)) {
+        $attachments[] = [
+            'filename' => 'LINE_AddFriend_QRCode.png',
+            'content' => $lineQrBase64,
+        ];
+    }
+
+    // Resend API 請求資料
+    $emailData = [
+        'from' => $MAIL_FROM_NAME . ' <' . $MAIL_FROM_EMAIL . '>',
+        'to' => [$email],
+        'subject' => '四系迎新報名確認信 - 緣分讓我們相遇在光年資外',
+        'html' => $emailBody,
+        'attachments' => $attachments
+    ];
+    
+    // 發送 HTTP 請求到 Resend API
+    $ch = curl_init('https://api.resend.com/emails');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $RESEND_API_KEY,
+            'Content-Type: application/json'
+        ],
+        CURLOPT_POSTFIELDS => json_encode($emailData, JSON_UNESCAPED_UNICODE)
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($httpCode === 200) {
+        $mailSent = true;
+    } else {
+        $responseData = json_decode($response, true);
+        $errorMessage = isset($responseData['message']) ? $responseData['message'] : $response;
+        $mailError = "HTTP {$httpCode}: {$errorMessage}";
+        if ($curlError) {
+            $mailError .= " | cURL Error: {$curlError}";
+        }
+        throw new Exception("郵件發送失敗: " . $mailError);
+    }
+
+} catch (Exception $e) {
+    error_log("Mail sending failed: " . $e->getMessage());
+    $mailError = $e->getMessage();
 }
 
 $conn->close();

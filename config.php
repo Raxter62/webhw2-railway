@@ -13,9 +13,13 @@ $TABLE_NAME = getenv('TABLE_NAME');
 // ===== 站點設定 =====
 $BASE_URL = getenv('BASE_URL');
 
-// ===== 郵件設定 =====
+// ===== 郵件設定 =====舊SMTP設定
+/*
 $MAIL_HOST = 'smtp.gmail.com';
 $MAIL_PORT = 587;
 $MAIL_USER = getenv('MAIL_USER') ?: '';
 $MAIL_PASS = getenv('MAIL_PASS') ?: '';
+*/
+// ===== 郵件設定 =====HTTP API設定
+$RESEND_API_KEY = getenv('RESEND_API_KEY') ?: '';
 $MAIL_FROM_NAME = '四系迎新報名';
