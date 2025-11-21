@@ -435,10 +435,10 @@ try {
         "姓名:{$name}\nEmail:{$email}\n手機:{$phone}\n家用電話:{$home}\n學號:{$sid}\n系別:{$dept}\n餐飲與需求:{$needsTxt}\n備註:{$note}"
     ));
 
-    // 關鍵修正：直接將圖片轉為 base64 嵌入 HTML，而非使用 cid
+    // 直接將圖片轉為 base64 嵌入 HTML，而非使用 cid
     $qrImageData = !empty($qrBase64) ? "data:image/png;base64,{$qrBase64}" : '';
     $lineQrImageData = !empty($lineQrBase64) ? "data:image/png;base64,{$lineQrBase64}" : '';
-    
+
     // 郵件內容 - 包含 PDF QR Code 和 LINE 加好友 QR Code
     $emailBody = "
         {$name} 您好,<br><br>
@@ -449,14 +449,14 @@ try {
         <div style='margin: 30px 0;'>
             <h3 style='color: #4a2c6b;'>📱 掃描下方 QR Code 查看報名表</h3>
             <div style='text-align:center; margin:20px 0;'>
-                <img src='cid:qrcode_image' alt='報名表 QR Code' style='max-width:250px; border:2px solid #4a2c6b; border-radius:8px; padding:10px;' />
+                <img src='{$qrImageData}' alt='報名表 QR Code' style='max-width:250px; border:2px solid #4a2c6b; border-radius:8px; padding:10px;' />
             </div>
         </div>
         
         <div style='margin: 30px 0; background: #e8f5e9; padding: 20px; border-radius: 8px; border: 2px solid #7cb342;'>
             <h3 style='color: #2d5016; margin-bottom: 15px;'>💚 加入 LINE 官方帳號接收最新消息</h3>
             <div style='text-align:center; margin:20px 0;'>
-                <img src='cid:line_qrcode_image' alt='LINE 加好友 QR Code' style='max-width:250px; border:2px solid #00B900; border-radius:8px; padding:10px; background: white;' />
+                <img src='{$lineQrImageData}' alt='LINE 加好友 QR Code' style='max-width:250px; border:2px solid #00B900; border-radius:8px; padding:10px; background: white;' />
             </div>
             <p style='text-align:center; color:#2d5016; font-weight:bold;'>掃描 QR Code 或點擊連結加入:</p>
             <p style='text-align:center;'><a href='{$lineAddFriendURL}' style='color:#00B900; font-weight:bold; text-decoration:none;'>{$lineAddFriendURL}</a></p>

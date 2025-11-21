@@ -1112,16 +1112,23 @@ if ('serviceWorker' in navigator) {
 
 // ====== PWA 安裝提示 ======
 let deferredPrompt;
+let installBtnTimeout = null;
 
 window.addEventListener('beforeinstallprompt', (e) => {
-  console.log('🎯 PWA 可安裝事件觸發');
+  console.log(' PWA 可安裝事件觸發');
   e.preventDefault();
   deferredPrompt = e;
 
-  // 延遲 15 秒
-  setTimeout(() => {
+  // 監聽進場動畫結束事件
+  if (document.getElementById('warp-intro')) {
+    window.addEventListener('warp:introFinished', () => {
+      // 進場動畫結束後立即顯示按鈕
+      showInstallButton();
+    }, { once: true });
+  } else {
+    // 如果沒有進場動畫，直接顯示
     showInstallButton();
-  }, 15000);
+  }
 });
 
 function showInstallButton() {
@@ -1154,20 +1161,69 @@ function showInstallButton() {
     const style = document.createElement('style');
     style.id = 'pwa-install-styles';
     style.textContent = `
-      @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
+       @keyframes fadeInPulse {
+        0% { 
+          opacity: 0; 
+          transform: scale(0.8) translateY(20px);
+        }
+        60% { 
+          opacity: 1;
+          transform: scale(1.05) translateY(0);
+        }
+        100% { 
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
       }
+      
+      @keyframes gentlePulse {
+        0%, 100% { 
+          transform: scale(1);
+          box-shadow: 0 8px 20px rgba(145, 191, 36, 0.5);
+        }
+        50% { 
+          transform: scale(1.03);
+          box-shadow: 0 10px 25px rgba(145, 191, 36, 0.6);
+        }
+      }
+      
+      @keyframes fadeOutDown {
+        0% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+      }
+      
+      .pwa-install-btn {
+        animation: fadeInPulse 0.6s ease-out forwards, gentlePulse 2s ease-in-out 0.6s infinite !important;
+      }
+      
       .pwa-install-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 25px rgba(102, 126, 234, 0.5);
+        transform: translateY(-2px) scale(1.05) !important;
+        box-shadow: 0 12px 30px rgba(145, 191, 36, 0.7) !important;
+        background: linear-gradient(135deg, #a8d632 0%, #91bf24 50%, #7da61e 100%) !important;
+        animation: none !important;
       }
+      
       .pwa-install-btn:active {
-        transform: translateY(0);
+        transform: translateY(0) scale(0.98) !important;
+      }
+      
+      .pwa-install-btn.fade-out {
+        animation: fadeOutDown 0.5s ease-out forwards !important;
       }
     `;
     document.head.appendChild(style);
   }
+  
+  // 觸發淡入動畫
+  setTimeout(() => {
+    installBtn.style.opacity = '1';
+  }, 10);
   
   installBtn.addEventListener('click', async () => {
     if (!deferredPrompt) {
@@ -1194,18 +1250,26 @@ function showInstallButton() {
     
     // 清除 prompt
     deferredPrompt = null;
-    installBtn.remove();
+    
+    // 清除定時器
+    if (installBtnTimeout) {
+      clearTimeout(installBtnTimeout);
+    }
+    
+    // 淡出移除
+    installBtn.classList.add('fade-out');
+    setTimeout(() => installBtn.remove(), 500);
   });
   
   document.body.appendChild(installBtn);
   
-  // 30 秒後自動隱藏
+  // 45 秒後自動隱藏
   setTimeout(() => {
     if (installBtn.parentElement) {
       installBtn.style.opacity = '0';
       setTimeout(() => installBtn.remove(), 300);
     }
-  }, 30000);
+  }, 45000);
 }
 
 // 監聽安裝成功
@@ -1215,7 +1279,10 @@ window.addEventListener('appinstalled', () => {
   
   // 移除安裝按鈕
   const btn = document.querySelector('.pwa-install-btn');
-  if (btn) btn.remove();
+  if (btn) {
+    btn.classList.add('fade-out');
+    setTimeout(() => btn.remove(), 500);
+  }
 });
 
 // ====== 除錯資訊 (開發時使用) ======
