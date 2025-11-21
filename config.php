@@ -22,5 +22,5 @@ $MAIL_PASS = getenv('MAIL_PASS') ?: '';
 */
 // ===== 郵件設定 =====HTTP API設定
 $RESEND_API_KEY = getenv('RESEND_API_KEY') ?: '';
-$MAIL_FROM_EMAIL = getenv('MAIL_FROM_EMAIL') ?: 'onboarding@resend.dev'; // Resend 測試信箱
+$MAIL_FROM_EMAIL = getenv('MAIL_FROM_EMAIL') ?: ''; 
 $MAIL_FROM_NAME = '四系迎新報名';
