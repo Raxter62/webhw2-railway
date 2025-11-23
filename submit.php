@@ -284,32 +284,55 @@ $qrURL = rtrim($BASE_URL, '/') . '/view_qr.php?id=' . $registrationId;
 
 /* === 7) 產生 QRCode (儲存為 Base64) === */
 $qrBase64 = '';
+$qrDataUri = '';
 try {
     // 使用臨時檔案產生 QR Code
     $tempQR = tempnam(sys_get_temp_dir(), 'qr_');
-    QRcode::png($pdfURL, $tempQR, QR_ECLEVEL_M, 8, 2);
     
-    if (file_exists($tempQR)) {
+    // 🔧 關鍵：確保生成高質量的 QR Code
+    QRcode::png($pdfURL, $tempQR, QR_ECLEVEL_M, 10, 2);  // 提高尺寸到 10
+    
+    if (file_exists($tempQR) && filesize($tempQR) > 0) {
         $qrContent = file_get_contents($tempQR);
-        $qrBase64 = base64_encode($qrContent);
-        unlink($tempQR); // 刪除臨時檔
+        
+        // ✅ 驗證圖片是否有效
+        if ($qrContent !== false && strlen($qrContent) > 100) {
+            $qrBase64 = base64_encode($qrContent);
+            // 預先組合 data URI（確保格式正確）
+            $qrDataUri = 'data:image/png;base64,' . $qrBase64;
+            
+            // 記錄成功訊息
+            error_log("QR Code 生成成功：" . strlen($qrBase64) . " bytes (Base64)");
+        } else {
+            error_log("QR Code 內容無效");
+        }
+        
+        unlink($tempQR);
+    } else {
+        error_log("QR Code 檔案生成失敗");
     }
 } catch (Exception $e) {
     error_log("QRCode generation failed: " . $e->getMessage());
 }
 
-
-/* === 7.5) 產生 LINE 加好友 QRCode === */
+/* === 7.5) 產生 LINE 加好友 QRCode - 改進版 === */
 $lineQrBase64 = '';
-$lineAddFriendURL = 'https://lin.ee/e407OkV';  // 您的 LINE 加好友連結
+$lineQrDataUri = '';
+$lineAddFriendURL = 'https://lin.ee/e407OkV';
 
 try {
     $tempLineQR = tempnam(sys_get_temp_dir(), 'line_qr_');
-    QRcode::png($lineAddFriendURL, $tempLineQR, QR_ECLEVEL_M, 8, 2);
+    QRcode::png($lineAddFriendURL, $tempLineQR, QR_ECLEVEL_M, 10, 2);
     
-    if (file_exists($tempLineQR)) {
+    if (file_exists($tempLineQR) && filesize($tempLineQR) > 0) {
         $lineQrContent = file_get_contents($tempLineQR);
-        $lineQrBase64 = base64_encode($lineQrContent);
+        
+        if ($lineQrContent !== false && strlen($lineQrContent) > 100) {
+            $lineQrBase64 = base64_encode($lineQrContent);
+            $lineQrDataUri = 'data:image/png;base64,' . $lineQrBase64;
+            error_log("LINE QR Code 生成成功：" . strlen($lineQrBase64) . " bytes");
+        }
+        
         unlink($tempLineQR);
     }
 } catch (Exception $e) {
@@ -435,38 +458,51 @@ try {
         "姓名:{$name}\nEmail:{$email}\n手機:{$phone}\n家用電話:{$home}\n學號:{$sid}\n系別:{$dept}\n餐飲與需求:{$needsTxt}\n備註:{$note}"
     ));
 
-    // 直接將圖片轉為 base64 嵌入 HTML，而非使用 cid
-    $qrImageData = !empty($qrBase64) ? "data:image/png;base64,{$qrBase64}" : '';
-    $lineQrImageData = !empty($lineQrBase64) ? "data:image/png;base64,{$lineQrBase64}" : '';
-
-    // 郵件內容 - 包含 PDF QR Code 和 LINE 加好友 QR Code
+    // 郵件內容 - 使用外部 URL 顯示 QR Code
     $emailBody = "
         {$name} 您好,<br><br>
         感謝您報名 <strong>四系迎新「緣分讓我們相遇在光年資外」</strong>!<br><br>
         您的報名資料:<br>
         <div style='font-family:monospace; background:#f6f8fa; padding:15px; border-radius:8px; margin:15px 0; border-left:4px solid #7cb342;'>{$infoHtml}</div>
-      
+    ";
+    
+    // 報名表 QR Code
+    if (!empty($qrURL)) {
+        $emailBody .= "
         <div style='margin: 30px 0;'>
             <h3 style='color: #4a2c6b;'>📱 掃描下方 QR Code 查看報名表</h3>
-            <div style='text-align:center; margin:20px 0;'>
-                <img src='{$qrImageData}' alt='報名表 QR Code' style='max-width:250px; border:2px solid #4a2c6b; border-radius:8px; padding:10px;' />
+            <div style='text-align:center; margin:20px 0; background:#f5f5f5; padding:20px; border-radius:8px;'>
+                <img src='{$qrURL}' alt='報名表 QR Code' style='max-width:250px; width:100%; border:2px solid #4a2c6b; border-radius:8px; padding:10px; background:white; display:inline-block;' />
+                <p style='color:#666; font-size:13px; margin-top:10px;'>掃描此 QR Code 可直接查看您的報名表</p>
             </div>
-        </div>
-        
+        </div>";
+    }
+    
+    // LINE 官方帳號 QR Code
+    if (!empty($lineQrBase64)) {
+        $lineQrImageData = 'data:image/png;base64,' . $lineQrBase64;
+        $emailBody .= "
         <div style='margin: 30px 0; background: #e8f5e9; padding: 20px; border-radius: 8px; border: 2px solid #7cb342;'>
             <h3 style='color: #2d5016; margin-bottom: 15px;'>💚 加入 LINE 官方帳號接收最新消息</h3>
             <div style='text-align:center; margin:20px 0;'>
-                <img src='{$lineQrImageData}' alt='LINE 加好友 QR Code' style='max-width:250px; border:2px solid #00B900; border-radius:8px; padding:10px; background: white;' />
+                <img src='{$lineQrImageData}' alt='LINE 加好友 QR Code' style='max-width:250px; width:100%; border:2px solid #00B900; border-radius:8px; padding:10px; background: white; display:inline-block;' />
             </div>
-            <p style='text-align:center; color:#2d5016; font-weight:bold;'>掃描 QR Code 或點擊連結加入:</p>
-            <p style='text-align:center;'><a href='{$lineAddFriendURL}' style='color:#00B900; font-weight:bold; text-decoration:none;'>{$lineAddFriendURL}</a></p>
-        </div>
-        
-        <p style='font-size:12px; color:#666;'>PDF 報名表和 QR Code 已作為附件一併寄送,請查收。</p>
-        <hr style='margin:20px 0; border:none; border-top:1px solid #ddd;'>
-        <p style='font-size:11px; color:#999;'>此為系統自動發送的確認信,請勿直接回覆。</p>
-    ";
+            <p style='text-align:center; margin-top:15px;'>
+                <a href='{$lineAddFriendURL}' style='display:inline-block; background:#00B900; color:white; padding:12px 24px; border-radius:25px; text-decoration:none; font-weight:bold;'>點我加入 LINE</a>
+            </p>
+        </div>";
+    }
     
+    $emailBody .= "
+        <div style='margin:30px 0; padding:15px; background:#f8f9fa; border-left:4px solid #7cb342; border-radius:4px;'>
+            <p style='font-size:13px; color:#333; margin:0;'><strong>📎 附件說明</strong></p>
+            <p style='font-size:12px; color:#666; margin:5px 0 0 0;'>• PDF 報名表<br>• QR Code 圖片（可下載保存）<br>• LINE 加好友 QR Code</p>
+        </div>
+        <hr style='margin:20px 0; border:none; border-top:1px solid #ddd;'>
+        <p style='font-size:11px; color:#999; text-align:center;'>此為系統自動發送的確認信，請勿直接回覆<br>如有問題請聯繫活動負責人</p>
+    ";
+
+
     // 準備附件
     $attachments = [];
 
@@ -515,7 +551,7 @@ try {
             'Authorization: Bearer ' . $RESEND_API_KEY,
             'Content-Type: application/json'
         ],
-        CURLOPT_POSTFIELDS => json_encode($emailData, JSON_UNESCAPED_UNICODE)
+        CURLOPT_POSTFIELDS => json_encode($emailData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
     ]);
 
     $response = curl_exec($ch);
