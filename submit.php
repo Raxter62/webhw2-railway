@@ -467,16 +467,21 @@ try {
     ";
     
     // 報名表 QR Code
-    if (!empty($qrURL)) {
-        $emailBody .= "
-        <div style='margin: 30px 0;'>
-            <h3 style='color: #4a2c6b;'>📱 掃描下方 QR Code 查看報名表</h3>
-            <div style='text-align:center; margin:20px 0; background:#f5f5f5; padding:20px; border-radius:8px;'>
-                <img src='{$qrURL}' alt='報名表 QR Code' style='max-width:250px; width:100%; border:2px solid #4a2c6b; border-radius:8px; padding:10px; background:white; display:inline-block;' />
-                <p style='color:#666; font-size:13px; margin-top:10px;'>掃描此 QR Code 可直接查看您的報名表</p>
-            </div>
-        </div>";
-    }
+    if (!empty($qrBase64) && !empty($qrURL)) {
+    $emailBody .= "
+    <div style='margin: 30px 0;background: #e7d8f0ff; padding: 20px; border-radius: 8px; border: 2px solid #693b9aff;'>
+        <h3 style='color: #4a2c6b;'>📱 掃描下方 QR Code 查看報名表</h3>
+        <div style='text-align:center; margin:20px 0; background:#f5f5f5; padding:20px; border-radius:8px;'>
+            <img src='{$qrURL}' alt='報名表 QR Code' style='max-width:250px; width:100%; border:2px solid #6d129eff; border-radius:8px; padding:10px; background:white; display:inline-block;' />
+            <p style='color:#666; font-size:13px; margin-top:10px;'>掃描此 QR Code 可直接查看您的報名表</p>
+        </div>
+    </div>";
+    
+    // 調試用（測試完可移除）
+    error_log("Email QR URL included: " . $qrURL);
+} else {
+    error_log("QR Code not included in email. qrBase64: " . (empty($qrBase64) ? 'empty' : 'exists') . ", qrURL: " . $qrURL);
+}
     
     // LINE 官方帳號 QR Code
     if (!empty($lineQrBase64)) {
@@ -494,15 +499,6 @@ try {
         </p>
     </div>";
 }
-    
-    $emailBody .= "
-        <div style='margin:30px 0; padding:15px; background:#f8f9fa; border-left:4px solid #7cb342; border-radius:4px;'>
-            <p style='font-size:13px; color:#333; margin:0;'><strong>📎 附件說明</strong></p>
-            <p style='font-size:12px; color:#666; margin:5px 0 0 0;'>• PDF 報名表<br>• QR Code 圖片（可下載保存）<br>• LINE 加好友 QR Code</p>
-        </div>
-        <hr style='margin:20px 0; border:none; border-top:1px solid #ddd;'>
-        <p style='font-size:11px; color:#999; text-align:center;'>此為系統自動發送的確認信，請勿直接回覆<br>如有問題請聯繫活動負責人</p>
-    ";
 
 
     // 準備附件
