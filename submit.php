@@ -473,16 +473,11 @@ try {
         <h3 style='color: #4a2c6b;'>📱 掃描下方 QR Code 查看報名表</h3>
         <div style='text-align:center; margin:20px 0;'>
             <img src='{$qrURL}' alt='報名表 QR Code' style='max-width:250px; width:100%; border:2px solid #6d129eff; border-radius:8px; padding:10px; background:white; display:inline-block;' />
+            </div>
             <p style='color:#666; font-size:13px; margin-top:10px;'>掃描此 QR Code 可直接查看您的報名表</p>
-        </div>
     </div>";
-    
-    // 調試用（測試完可移除）
-    error_log("Email QR URL included: " . $qrURL);
-} else {
-    error_log("QR Code not included in email. qrBase64: " . (empty($qrBase64) ? 'empty' : 'exists') . ", qrURL: " . $qrURL);
-}
-    
+    }
+
     // LINE 官方帳號 QR Code
     if (!empty($lineQrBase64)) {
     // 生成 LINE QR Code 的外部 URL
@@ -498,7 +493,7 @@ try {
             <a href='{$lineAddFriendURL}' style='display:inline-block; background:#00B900; color:white; padding:12px 24px; border-radius:25px; text-decoration:none; font-weight:bold;'>點我加入 LINE</a>
         </p>
     </div>";
-}
+    }
 
 
     // 準備附件
