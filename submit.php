@@ -480,18 +480,20 @@ try {
     
     // LINE 官方帳號 QR Code
     if (!empty($lineQrBase64)) {
-        $lineQrImageData = 'data:image/png;base64,' . $lineQrBase64;
-        $emailBody .= "
-        <div style='margin: 30px 0; background: #e8f5e9; padding: 20px; border-radius: 8px; border: 2px solid #7cb342;'>
-            <h3 style='color: #2d5016; margin-bottom: 15px;'>💚 加入 LINE 官方帳號接收最新消息</h3>
-            <div style='text-align:center; margin:20px 0;'>
-                <img src='{$lineQrImageData}' alt='LINE 加好友 QR Code' style='max-width:250px; width:100%; border:2px solid #00B900; border-radius:8px; padding:10px; background: white; display:inline-block;' />
-            </div>
-            <p style='text-align:center; margin-top:15px;'>
-                <a href='{$lineAddFriendURL}' style='display:inline-block; background:#00B900; color:white; padding:12px 24px; border-radius:25px; text-decoration:none; font-weight:bold;'>點我加入 LINE</a>
-            </p>
-        </div>";
-    }
+    // 生成 LINE QR Code 的外部 URL
+    $lineQrURL = rtrim($BASE_URL, '/') . '/view_line_qr.php?id=' . $registrationId;
+    
+    $emailBody .= "
+    <div style='margin: 30px 0; background: #e8f5e9; padding: 20px; border-radius: 8px; border: 2px solid #7cb342;'>
+        <h3 style='color: #2d5016; margin-bottom: 15px;'>💚 加入 LINE 官方帳號接收最新消息</h3>
+        <div style='text-align:center; margin:20px 0;'>
+            <img src='{$lineQrURL}' alt='LINE 加好友 QR Code' style='max-width:250px; width:100%; border:2px solid #00B900; border-radius:8px; padding:10px; background: white; display:inline-block;' />
+        </div>
+        <p style='text-align:center; margin-top:15px;'>
+            <a href='{$lineAddFriendURL}' style='display:inline-block; background:#00B900; color:white; padding:12px 24px; border-radius:25px; text-decoration:none; font-weight:bold;'>點我加入 LINE</a>
+        </p>
+    </div>";
+}
     
     $emailBody .= "
         <div style='margin:30px 0; padding:15px; background:#f8f9fa; border-left:4px solid #7cb342; border-radius:4px;'>
