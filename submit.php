@@ -289,13 +289,13 @@ try {
     // 使用臨時檔案產生 QR Code
     $tempQR = tempnam(sys_get_temp_dir(), 'qr_');
     
-    // 🔧 關鍵：確保生成高質量的 QR Code
-    QRcode::png($pdfURL, $tempQR, QR_ECLEVEL_M, 10, 2);  // 提高尺寸到 10
     
+    QRcode::png($pdfURL, $tempQR, QR_ECLEVEL_M,8, 2);  
+
     if (file_exists($tempQR) && filesize($tempQR) > 0) {
         $qrContent = file_get_contents($tempQR);
         
-        // ✅ 驗證圖片是否有效
+        // 驗證圖片是否有效
         if ($qrContent !== false && strlen($qrContent) > 100) {
             $qrBase64 = base64_encode($qrContent);
             // 預先組合 data URI（確保格式正確）
@@ -471,7 +471,7 @@ try {
     $emailBody .= "
     <div style='margin: 30px 0;background: #e7d8f0ff; padding: 20px; border-radius: 8px; border: 2px solid #693b9aff;'>
         <h3 style='color: #4a2c6b;'>📱 掃描下方 QR Code 查看報名表</h3>
-        <div style='text-align:center; margin:20px 0; background:#f5f5f5; padding:20px; border-radius:8px;'>
+        <div style='text-align:center; margin:20px 0;'>
             <img src='{$qrURL}' alt='報名表 QR Code' style='max-width:250px; width:100%; border:2px solid #6d129eff; border-radius:8px; padding:10px; background:white; display:inline-block;' />
             <p style='color:#666; font-size:13px; margin-top:10px;'>掃描此 QR Code 可直接查看您的報名表</p>
         </div>

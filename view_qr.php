@@ -69,4 +69,3 @@ try {
     error_log("view_qr.php error: " . $e->getMessage());
     exit('Error loading QR Code');
 }
-// ✅ 不要有 ?> 結束標籤
